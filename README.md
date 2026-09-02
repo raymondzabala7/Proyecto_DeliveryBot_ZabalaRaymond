@@ -2,8 +2,6 @@
 
 Bot de Telegram para gestión de pedidos de una cafetería institucional, construido con **n8n**, un **AI Agent (Google Gemini)** y **Google Sheets** como base de datos.
 
-> Proyecto académico — reemplaza `[Nombre Apellido]`, `[Curso/Materia]` y `[Fecha de entrega]` por tus datos antes de subir el repositorio.
-
 **Autor:** Raymond Zabala
 **Curso:** M4
 **Fecha:** 01-09-2026
