@@ -179,3 +179,27 @@ Proyecto_DeliveryBot_[ApellidoNombre]/
 
 
 Link Google Sheets: https://docs.google.com/spreadsheets/d/1H2vYttefS7U8Am4vfw8c792pfKAUT_6BACjc6ryBZ78/edit?usp=sharing
+
+## Update: Examen 1
+
+### Objetivo
+Implementar un comando de reporte administrativo que muestre las ventas del día agrupadas por categoría (Bebidas, Comidas, Snacks), sin necesidad de revisar pedido por pedido.
+
+### Lógica implementada
+
+**1. Acceso a datos**
+Se agregó un sub-workflow (`My workflow 10`) invocado como tool desde el AI Agent principal. Este sub-workflow:
+- Valida primero si el `telegram_id` que invoca el reporte corresponde al administrador (nodo `¿Es Admin?`). Si no lo es, se corta el flujo por la rama `false` y responde con un mensaje de "No Autorizado".
+- Si es admin, lee la hoja `PEDIDOS` completa (`Traer Pedidos`) y la hoja `MENU` (`Traer Menu`) desde Google Sheets.
+
+**2. Procesamiento (nodo Code)**
+En lugar de un nodo Summarize, se usó un nodo `Code` (JavaScript) llamado `Agrupar por Categoria`, porque los pedidos no guardan la categoría directamente — solo un texto libre (`detalles_pedido`) con el nombre del producto. La lógica:
+
+1. Filtra los pedidos de `PEDIDOS` cuya `fecha` coincide con el día actual (zona horaria `America/Bogota`).
+2. Construye un mapa `producto → categoría` a partir de la hoja `MENU`, usando el campo `nombre` de cada producto en minúsculas como clave.
+3. Para cada pedido, busca dentro de `detalles_pedido` qué nombres de producto del mapa aparecen mencionados, y así determina a qué categoría(s) pertenece.
+4. Si un pedido mezcla productos de varias categorías, reparte el `total_pagar` en partes iguales entre las categorías detectadas.
+5. Acumula los montos en un objeto `totales = { Bebidas, Comidas, Snacks }` y calcula el total del día como la suma de las tres.
+
+**3. Formato de salida**
+Se genera un mensaje HTML para Telegram con el formato:
