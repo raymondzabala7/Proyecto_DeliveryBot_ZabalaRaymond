@@ -1,0 +1,840 @@
+{
+  "name": "My workflow 5",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ffc5566f-d6d8-45d9-ad07-397c60c0c23d",
+      "name": "Telegram Trigger",
+      "webhookId": "d6e8680c-9f8f-41b4-a779-9ec2a7edeb20",
+      "retryOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "K1wmmNAZ3Kg5vCjM",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Telegram Trigger').item.json.message?.text ?? $('Telegram Trigger').item.json.callback_query?.data }}\n\n[telegram_id: {{ $('Telegram Trigger').item.json.message?.chat?.id ?? $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}]",
+        "options": {
+          "systemMessage": "Eres DeliveryBot, un asistente virtual inteligente para la gestión de pedidos de una cafetería institucional a través de Telegram. Tu propósito es guiar al usuario de forma estricta, ordenada y conversacional, interpretando tanto mensajes de texto como interacciones de botones.\nEl usuario puede interactuar en cualquier momento mediante botones. Los identificadores de callback que debes reconocer son: 'categoria_bebidas', 'categoria_comidas', 'categoria_snacks', 'ver_carrito' y 'mis_pedidos'. Trátalos siempre como si el usuario hubiera escrito esa intención explícitamente, sin pedirle que la repita en texto.\nSigue este flujo estricto:\n1. Verificación de Usuario: Al iniciar cualquier conversación, usa obligatoriamente tu herramienta \"verificar_o_crear_usuario\" pasando el telegram_id y nombre del usuario, para asegurarte de que esté registrado antes de continuar.\n2. Saludo y Menú Inicial: Cuando el usuario inicie la conversación, saluda cordialmente de forma breve y utiliza obligatoriamente tu herramienta \"ConsultarMenu\" para obtener la lista actualizada de productos, precios y stock desde la base de datos de Google Sheets (hoja MENU). Presenta las opciones organizadas por categorías (Bebidas, Comidas, Snacks).\n3. Interpretación de Botones y Selección: Si el usuario presiona un botón interactivo (cuyos identificadores o datos de callback son 'categoria_bebidas', 'categoria_comidas' o 'categoria_snacks'), debes interpretarlo inmediatamente como una solicitud para ver los productos de esa categoría específica, usando la herramienta \"ConsultarMenu\". Ayuda al usuario a elegir el producto exacto y la cantidad deseada. Si un producto no cuenta con stock disponible, infórmalo educadamente y sugiérele alternativas.\n3.1. Verifica siempre que la cantidad solicitada no supere el stock disponible del producto (dato que obtienes de \"ConsultarMenu\"). Si el usuario pide más unidades de las disponibles, infórmale el stock máximo real y pregúntale si desea ajustar la cantidad.\n4. Resumen y Confirmación Obligatoria: Antes de procesar cualquier compra, muestra imperativamente un resumen exacto con la siguiente estructura:\n   \"Llevas [Cantidad] [Nombre Producto]. Total: $[Precio Total]. ¿Confirmar?\"\n   - REGLA ESTRICTA: No ejecutes ninguna herramienta de registro hasta que el usuario responda explícitamente con un \"Sí\", \"Confirmar\" o una afirmación equivalente. No des por hecho el pedido.\n   - REGLA DE VALIDACIÓN DE CANTIDAD: La cantidad de cualquier producto debe ser un número entero mayor o igual a 1. Si el usuario indica una cantidad de 0, negativa, o no numérica, NO la aceptes ni la agregues al carrito. Respóndele con amabilidad explicando que la cantidad debe ser al menos 1, y vuelve a preguntarle cuántas unidades desea.\n5. Registro en Base de Datos: Una vez que el usuario confirme explícitamente, utiliza de forma estricta tu herramienta \"agregar_pedido\" para enviar los datos a Google Sheets (hoja PEDIDOS), generando el id_pedido, el id_usuario, los detalles del carrito y el total a pagar.\n6. Cierre: Confirma de manera clara al usuario que su pedido ha sido recibido con éxito bajo el estado inicial \"Recibido\".\n7. Consulta de Carrito: Si el usuario presiona el botón o escribe algo equivalente a \"ver_carrito\", usa obligatoriamente tu herramienta \"consultar_carrito\" pasando su telegram_id. Muestra el contenido del carrito actual con el mismo formato del resumen (\"Llevas [Cantidad] [Producto]...\"). Si el carrito está vacío, indícalo claramente y sugiere ver el menú. Después de mostrar el carrito con contenido, pregúntale al usuario si desea vaciarlo o seguir agregando productos.\n7.1. Vaciar Carrito: Si el usuario responde afirmativamente a esa pregunta, o en cualquier momento pide explícitamente vaciar, borrar o reiniciar su carrito por escrito, usa obligatoriamente tu herramienta \"vaciar_carrito\" pasando su telegram_id. Confirma al usuario que su carrito quedó vacío.\n8. Consulta de Pedidos Anteriores: Si el usuario presiona el botón o escribe algo equivalente a \"mis_pedidos\", usa obligatoriamente tu herramienta \"consultar_pedidos\" pasando su telegram_id. Presenta los pedidos más recientes indicando id_pedido, productos, total y estado actual (Recibido, Preparación, En camino, Entregado). Si no tiene pedidos registrados, indícalo con amabilidad.\n8.1. Cancelación de Pedido: Si el usuario pide cancelar un pedido, primero identifica el id_pedido (si no lo menciona, usa \"consultar_pedidos\" para mostrarle sus pedidos recientes y pregúntale cuál desea cancelar). Antes de ejecutar la cancelación, confirma explícitamente con el usuario (\"¿Confirmas que deseas cancelar el pedido [id_pedido]?\"). Solo después de su confirmación, usa la herramienta \"cancelar_pedido\" pasando su telegram_id y el id_pedido. Informa el resultado exacto que devuelva la herramienta (puede que el pedido ya no sea cancelable si está en preparación o entregado).\n9. Actualización de Stock: Inmediatamente después de ejecutar \"agregar_pedido\" con éxito en el paso 4, usa de forma estricta tu herramienta \"actualizar_stock\" para descontar las unidades vendidas del inventario en la hoja MENU. Nunca proceses un pedido sin actualizar el stock correspondiente.\n9.1. Reporte de Categorías (Admin): Si el usuario pide explícitamente el \"reporte de categorías\" o \"ventas por categoría\", usa la herramienta \"reporte_ventas_categoria\" pasando su telegram_id. No es una opción visible en los botones normales — solo respóndela si el usuario la solicita directamente. La herramienta se encarga de verificar si tiene permisos.\n10. Formato de Respuesta (OBLIGATORIO): Todos tus mensajes se envían a Telegram en formato HTML, NO Markdown. Al redactar cualquier respuesta:\n    - Nunca uses asteriscos dobles (**texto**) para negrita. Usa <b>texto</b>.\n    - Nunca uses guiones bajos (_texto_) para cursiva. Usa <i>texto</i>.\n    - Para IDs de pedido o códigos, usa <code>texto</code> en lugar de comillas invertidas.\n    - No uses encabezados con # ni listas con - o *. Separa ideas con saltos de línea simples y emojis.\n    - Ejemplo correcto: \"¡Listo, <b>Raymond Javier Zabala Sanchez</b>! Ya te he registrado en nuestro sistema.\"\n    - Ejemplo incorrecto: \"¡Listo, **Raymond Javier Zabala Sanchez**! Ya te he registrado en nuestro sistema.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "3752dd4e-a792-4e2e-8aa8-9bcdf203c87b",
+      "name": "AI Agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message?.chat?.id ?? $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}-v3"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        288,
+        176
+      ],
+      "id": "4cf65132-dada-46c3-b5e4-5f8f294191f8",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "description": "Usa esta herramienta para consultar la base de datos y obtener el menú actualizado del restaurante, incluyendo productos y precios.",
+        "workflowId": {
+          "__rl": true,
+          "value": "xhg8XZTgPgxpNrZ4",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/xhg8XZTgPgxpNrZ4"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "prueba": "67"
+          },
+          "matchingColumns": [
+            "prueba"
+          ],
+          "schema": [
+            {
+              "id": "prueba",
+              "displayName": "prueba",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        256
+      ],
+      "id": "4e0b9827-c8d2-4c32-a27b-c9f6bccbdb55",
+      "name": "ConsultarMenu"
+    },
+    {
+      "parameters": {
+        "description": "\"Úsala cuando el usuario confirme su compra para registrar el pedido en la base de datos de Google Sheets.\"",
+        "workflowId": {
+          "__rl": true,
+          "value": "xm7PeGLtaU0OosN9",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/xm7PeGLtaU0OosN9"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "total_pago": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('total_pago', `\"El monto total a pagar por el pedido, sumando el precio de todos los productos confirmados por el cliente. Solo el número o valor total.\"`, 'number') }}",
+            "detalles_pedido": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('detalles_pedido', `\"Lista de los productos y cantidades que el cliente confirmó comprar, en formato de texto legible. Ejemplo: 1x Café Americano, 1x Empanada de Pollo\"`, 'string') }}",
+            "telegram_id": "={{ $('Telegram Trigger').item.json.message?.chat.id ?? $('Telegram Trigger').item.json.callback_query?.message.chat.id }}"
+          },
+          "matchingColumns": [
+            ""
+          ],
+          "schema": [
+            {
+              "id": "telegram_id",
+              "displayName": "telegram_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "detalles_pedido",
+              "displayName": "detalles_pedido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "total_pago",
+              "displayName": "total_pago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        608,
+        304
+      ],
+      "id": "89add3e9-889d-416d-a9fd-eff51f84ec5d",
+      "name": "agregar_pedido"
+    },
+    {
+      "parameters": {
+        "description": "\"Úsala cuando el usuario confirme su compra para actualizar y restar las unidades vendidas del stock en la hoja MENU de Google Sheets.\"",
+        "workflowId": {
+          "__rl": true,
+          "value": "QBzYwgPIErvKzhWI",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/QBzYwgPIErvKzhWI"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [
+            "id_producto"
+          ],
+          "schema": [
+            {
+              "id": "id_producto",
+              "displayName": "id_producto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        320
+      ],
+      "id": "ce48cbd6-3ef7-4c77-b4c6-0870488f333f",
+      "name": "actualizar_stock"
+    },
+    {
+      "parameters": {
+        "operation": "sendRichMessage",
+        "chatId": "={{ $('Telegram Trigger').first().json.message?.chat?.id ?? $('Telegram Trigger').first().json.callback_query?.message?.chat?.id }}",
+        "richMessageText": "={{ $json.output }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🥤 Bebidas",
+                    "additionalFields": {
+                      "callback_data": "categoria_bebidas"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🍔 Comidas",
+                    "additionalFields": {
+                      "callback_data": "categoria_comidas"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🍿 Snacks",
+                    "additionalFields": {
+                      "callback_data": "categoria_snacks"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🛒 Ver Carrito",
+                    "additionalFields": {
+                      "callback_data": "ver_carrito"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📦 Mis Pedidos",
+                    "additionalFields": {
+                      "callback_data": "mis_pedidos"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        0
+      ],
+      "id": "52b7cfc8-2b20-4bed-82e1-8ec91d6d8292",
+      "name": "Send a rich message",
+      "webhookId": "b761fe5b-c22f-4882-a901-549a0f31a8cf",
+      "retryOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "K1wmmNAZ3Kg5vCjM",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Úsala cuando el usuario pida ver su carrito de compras (\"ver_carrito\"). Consulta la hoja SESSIONS y devuelve el carrito_temporal actual del usuario, con los productos, cantidades y el total acumulado.",
+        "workflowId": {
+          "__rl": true,
+          "value": "jCR12j8Xbr673Dtq",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/jCR12j8Xbr673Dtq"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telegram_id": "={{ $('Telegram Trigger').item.json.message?.chat?.id ?? $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}"
+          },
+          "matchingColumns": [
+            "telegram_id"
+          ],
+          "schema": [
+            {
+              "id": "telegram_id",
+              "displayName": "telegram_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        320
+      ],
+      "id": "1cb9d21e-dd14-4076-8bf8-4882b49b65ae",
+      "name": "consultar_carrito"
+    },
+    {
+      "parameters": {
+        "description": "Úsala cuando el usuario pida ver sus pedidos anteriores o el estado de su pedido actual (\"mis_pedidos\"). Devuelve hasta los últimos 5 pedidos con id_pedido, detalles, total, estado y fecha.",
+        "workflowId": {
+          "__rl": true,
+          "value": "rMqgtTTIf60wHiIK",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/rMqgtTTIf60wHiIK"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telegram_id": "={{ $('Telegram Trigger').first().json.message?.chat?.id ?? $('Telegram Trigger').first().json.callback_query?.message?.chat?.id }}"
+          },
+          "matchingColumns": [
+            "telegram_id"
+          ],
+          "schema": [
+            {
+              "id": "telegram_id",
+              "displayName": "telegram_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        928,
+        320
+      ],
+      "id": "93f7b62d-04ed-425a-9667-ea381a407b86",
+      "name": "consultar_pedidos"
+    },
+    {
+      "parameters": {
+        "description": "Úsala SIEMPRE al inicio de la conversación, antes de mostrar el menú, para verificar si el usuario ya está registrado o crearlo si es nuevo. Pásale su telegram_id y nombre_completo.",
+        "workflowId": {
+          "__rl": true,
+          "value": "wgAGbO5vA2qicUoV",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/wgAGbO5vA2qicUoV"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telegram_id": "={{ $('Telegram Trigger').first().json.message?.chat?.id ?? $('Telegram Trigger').first().json.callback_query?.message?.chat?.id }}",
+            "nombre_completo": "={{ $('Telegram Trigger').first().json.message?.chat?.id ?? $('Telegram Trigger').first().json.callback_query?.message?.chat?.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "telegram_id",
+              "displayName": "telegram_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nombre_completo",
+              "displayName": "nombre_completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "departamento",
+              "displayName": "departamento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        304
+      ],
+      "id": "4a88a444-5b9b-4b02-8ea2-f2235c827939",
+      "name": "verificar_o_crear_usuario"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "37b056ff-2d51-4cc7-bacf-5e93818bad4a",
+              "leftValue": "={{ $json.callback_query ? \"si\" : \"no\" }}",
+              "rightValue": "si",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "7e5dc001-54d6-4443-a7fe-c27c97f65f54",
+      "name": "If",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query?.id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        -80
+      ],
+      "id": "d9d7d78c-2c37-42e9-a0f9-97da70b83fa5",
+      "name": "Answer Query a callback",
+      "webhookId": "3cfaa223-404b-4569-8b39-9cc117d6bfa5",
+      "retryOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "K1wmmNAZ3Kg5vCjM",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Úsala cuando el usuario pida vaciar, borrar o reiniciar su carrito de compras. Elimina el carrito temporal actual del usuario en la hoja SESSIONS.",
+        "workflowId": {
+          "__rl": true,
+          "value": "cI73bH2EgsLbBofR",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/cI73bH2EgsLbBofR"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telegram_id": "={{ $('Telegram Trigger').first().json.message?.chat?.id ?? $('Telegram Trigger').first().json.callback_query?.message?.chat?.id }}"
+          },
+          "matchingColumns": [
+            "telegram_id"
+          ],
+          "schema": [
+            {
+              "id": "telegram_id",
+              "displayName": "telegram_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1136,
+        272
+      ],
+      "id": "0ac10d41-e4fd-4769-98d8-780548b966fa",
+      "name": "vaciar_carrito"
+    },
+    {
+      "parameters": {
+        "description": "Úsala cuando el usuario pida cancelar un pedido específico, después de que confirme explícitamente. Requiere el id_pedido (puedes obtenerlo mostrando antes \"mis_pedidos\" si el usuario no lo especifica) y su telegram_id.",
+        "workflowId": {
+          "__rl": true,
+          "value": "jSfcYpcLoDsq4Evz",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/jSfcYpcLoDsq4Evz",
+          "cachedResultName": "My workflow 9"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telegram_id": "={{ $('Telegram Trigger').first().json.message?.chat?.id ?? $('Telegram Trigger').first().json.callback_query?.message?.chat?.id }}",
+            "id_pedido": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('id_pedido', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "telegram_id",
+              "displayName": "telegram_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "id_pedido",
+              "displayName": "id_pedido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1216,
+        176
+      ],
+      "id": "5e9f8f4e-152d-47e8-bb46-0db08c6469c4",
+      "name": "cancelar_pedido"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.6-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        112,
+        160
+      ],
+      "id": "c5c559d7-7bd1-4846-9d4a-1a4042044f0e",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "9WkqtYmgHK61AEBR",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Comando oculto de administrador. Úsala SOLO si el usuario pide explícitamente el reporte de ventas por categoría (ej: \"reporte de categorías\", \"ventas del día por categoría\"). Pásale su telegram_id; la herramienta internamente valida si tiene permisos de admin.",
+        "workflowId": {
+          "__rl": true,
+          "value": "H5uhiTtCgCkseipU",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/H5uhiTtCgCkseipU"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telegram_id": "={{ $('Telegram Trigger').first().json.message?.chat?.id ?? $('Telegram Trigger').first().json.callback_query?.message?.chat?.id }}"
+          },
+          "matchingColumns": [
+            "telegram_id"
+          ],
+          "schema": [
+            {
+              "id": "telegram_id",
+              "displayName": "telegram_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        256
+      ],
+      "id": "f70f2f50-a97a-484e-8f1c-0bc72c65a931",
+      "name": "reporte_ventas_categoria"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a rich message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ConsultarMenu": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agregar_pedido": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizar_stock": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_carrito": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_pedidos": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "verificar_o_crear_usuario": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Answer Query a callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Query a callback": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "vaciar_carrito": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cancelar_pedido": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reporte_ventas_categoria": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "4b49de55-ae8b-4455-83f6-6fa50ee318ff",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f8afc8f77fec1525482f51025e2b6631272d7cd6a6b67d5cb150cf184888277f"
+  },
+  "nodeGroups": [],
+  "id": "76JWYhAIFfYb2Ev1",
+  "tags": []
+}
